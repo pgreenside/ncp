@@ -42,14 +42,14 @@ def default_schedule(model):
 def default_config(model):
   config = tools.AttrDict()
   config.num_inputs = 193
-  config.layer_sizes = [500, 500, 500]  # [50, 50]
+  config.layer_sizes = [500, 400, 300]  # [50, 50]
   if model == 'bbb':
     config.divergence_scale = 0.1
   if model == 'bbb_ncp':
     config.noise_std = 0.5
     config.ncp_scale = 0.1
     config.divergence_scale = 0
-    config.ood_std_prior = 0.1
+    config.ood_std_prior = 0.5 # 0.1
     config.center_at_target = True
   if model == 'det_mix_ncp':
     config.noise_std = 0.5
@@ -94,7 +94,6 @@ def plot_results(args):
   filename = os.path.join(args.logdir, 'results.pdf')
   fig.savefig(filename)
 
-
 def main(args):
   if args.replot:
     plot_results(args)
@@ -130,7 +129,7 @@ def main(args):
     plot_results(args)
     print('metrics')
     print(metrics)
-    
+
   # print("embedding after training")
   # from IPython import embed; embed()
 

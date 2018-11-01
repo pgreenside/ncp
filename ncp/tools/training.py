@@ -43,7 +43,7 @@ def run_experiment(
       test_likelihoods=[],
       test_distances=[])
   # Looks like will over sample some
-  if num_initial >= len(dataset.train.inputs):
+  if num_initial > len(dataset.train.inputs):
     print('Selected more data points than in training set, setting to max')
     num_initial = len(dataset.train.inputs)
   visibles = random.choice(len(dataset.train.inputs), num_initial, replace=False).tolist()
@@ -69,7 +69,7 @@ def run_experiment(
       if epoch in eval_after_epochs:
         target_scale = dataset.get('target_scale', 1)
         metrics.num_visible.append(len(visibles))
-        print('Evaluating training points')
+        print('TRAINING evaluation')
         likelihood, distance = evaluate_model(
             sess, graph, has_uncertainty, dataset.train.inputs[visible],
             dataset.train.targets[visible], target_scale)
@@ -83,7 +83,7 @@ def run_experiment(
               [test_inputs, dataset.train.inputs[unseen]], 0)
           test_targets = np.concatenate(
               [test_targets, dataset.train.targets[unseen]], 0)
-        print('Evaluating testing (and unseen training) points')
+        print('TESTING evaluation (and unseen training) points')
         likelihood, distance = evaluate_model(
             sess, graph, has_uncertainty, test_inputs, test_targets,
             target_scale)
@@ -106,7 +106,7 @@ def run_experiment(
         plotting.visualize_model(
             filename, sess, graph, has_uncertainty, dataset, visibles)
 
-      if epoch in select_after_epochs:
+      if epoch in select_after_epochs and num_select > 0:
         visibles += select_next_target(
             random, sess, graph, has_uncertainty, dataset, visibles,
             num_select, temperature)
@@ -146,16 +146,15 @@ def evaluate_model(
         target) - np.log(target_scale)
     likelihoods.append(likelihood)
   if log:
-    print('Current correlation of target and mean predictions: %.4f'%(
+    print('%.4f: Current correlation of target and mean predictions'%(
           scipy.stats.spearmanr(targets, means)[0]))
-    print('Current correlation of uncertainty and abs(target - mean predictions): %.4f'%(
+    print('%.4f: Current correlation of uncertainty and abs(target - mean predictions)'%(
           scipy.stats.spearmanr(uncertainties, abs(targets - np.array(means)[:, None]))[0]))
-    print('Current averaged squared distance * scale: %.4f'%(
+    print('%.4f: Current averaged squared distance * scale'%(
           np.mean(np.concatenate(squared_distances, 0).sum(1))))
   likelihood = np.concatenate(likelihoods, 0).sum(1).mean(0)
   distance = np.sqrt(np.concatenate(squared_distances, 0).sum(1).mean(0))
   return likelihood, distance
-
 
 def select_next_target(
     random, sess, graph, has_uncertainty, dataset, visibles,
@@ -176,9 +175,11 @@ def select_next_target(
   logit -= logit.max()
   logit[np.array(visibles)] = -np.inf
   prob = np.exp(logit)
-  prob /= prob.sum()
-  return random.choice(len(value), num_select, p=prob).tolist()
-
+  if prob.sum() > 0:
+    prob /= prob.sum()
+    return random.choice(len(value), num_select, p=prob).tolist()
+  else:
+    return []
 
 def load_results(pattern):
   results = collections.defaultdict(list)
