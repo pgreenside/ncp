@@ -43,7 +43,7 @@ def run_experiment(
       test_likelihoods=[],
       test_distances=[])
   # Looks like will over sample some
-  if num_initial >= len(dataset.train.inputs)
+  if num_initial >= len(dataset.train.inputs):
     print('Selected more data points than in training set, setting to max')
     num_initial = len(dataset.train.inputs)
   visibles = random.choice(len(dataset.train.inputs), num_initial, replace=False).tolist()

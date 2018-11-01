@@ -32,7 +32,7 @@ def default_schedule(model):
   config.visualize_after_epochs = range(0) #range(1000, 50000, 10000)
   config.batch_size = 100
   config.temperature = 0.5
-  config.evaluate_unseen_train = store_true
+  config.evaluate_unseen_train = True
   config.filetype = 'pdf'
   if model == 'det':
     config.has_uncertainty = False
