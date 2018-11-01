@@ -42,7 +42,12 @@ def run_experiment(
       train_distances=[],
       test_likelihoods=[],
       test_distances=[])
-  visibles = random.choice(len(dataset.train.inputs), num_initial).tolist()
+  # Looks like will over sample some
+  if num_initial >= len(dataset.train.inputs)
+    print('Selected more data points than in training set, setting to max')
+    num_initial = len(dataset.train.inputs)
+  visibles = random.choice(len(dataset.train.inputs), num_initial, replace=False).tolist()
+  # visibles = random.choice(len(dataset.train.inputs), num_initial).tolist()
 
   config = tf.ConfigProto()
   config.gpu_options.allow_growth = True
@@ -64,6 +69,7 @@ def run_experiment(
       if epoch in eval_after_epochs:
         target_scale = dataset.get('target_scale', 1)
         metrics.num_visible.append(len(visibles))
+        print('Evaluating training points')
         likelihood, distance = evaluate_model(
             sess, graph, has_uncertainty, dataset.train.inputs[visible],
             dataset.train.targets[visible], target_scale)
@@ -77,6 +83,7 @@ def run_experiment(
               [test_inputs, dataset.train.inputs[unseen]], 0)
           test_targets = np.concatenate(
               [test_targets, dataset.train.targets[unseen]], 0)
+        print('Evaluating testing (and unseen training) points')
         likelihood, distance = evaluate_model(
             sess, graph, has_uncertainty, test_inputs, test_targets,
             target_scale)
@@ -111,8 +118,11 @@ def run_experiment(
 
 def evaluate_model(
     sess, graph, has_uncertainty, inputs, targets, target_scale,
-    batch_size=100):
+    batch_size=100, log=True):
+  # print('embedding in evaluate model')
+  # from IPython import embed; embed()
   likelihoods, squared_distances = [], []
+  means, noises, uncertainties = [], [], []
   for index in range(0, len(inputs), batch_size):
     target = targets[index: index + batch_size]
     mean, noise, uncertainty = sess.run(
@@ -129,9 +139,19 @@ def evaluate_model(
     # likelihood = scipy.stats.norm(
     #     target_scale * mean, target_scale * std).logpdf(
     #         target_scale * target)
+    means = means + mean.flatten().tolist()
+    noises = noises + noise.flatten().tolist()
+    uncertainties = uncertainties + uncertainty.flatten().tolist()
     likelihood = scipy.stats.norm(mean, std).logpdf(
         target) - np.log(target_scale)
     likelihoods.append(likelihood)
+  if log:
+    print('Current correlation of target and mean predictions: %.4f'%(
+          scipy.stats.spearmanr(targets, means)[0]))
+    print('Current correlation of uncertainty and abs(target - mean predictions): %.4f'%(
+          scipy.stats.spearmanr(uncertainties, abs(targets - np.array(means)[:, None]))[0]))
+    print('Current averaged squared distance * scale: %.4f'%(
+          np.mean(np.concatenate(squared_distances, 0).sum(1))))
   likelihood = np.concatenate(likelihoods, 0).sum(1).mean(0)
   distance = np.sqrt(np.concatenate(squared_distances, 0).sum(1).mean(0))
   return likelihood, distance
