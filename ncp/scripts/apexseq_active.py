@@ -2,6 +2,7 @@ import argparse
 import itertools
 import os
 import warnings
+from importlib import reload
 
 import matplotlib as mpl
 mpl.use('Agg')
@@ -9,10 +10,10 @@ import matplotlib.pyplot as plt
 import ruamel.yaml as yaml
 import tensorflow as tf
 
+# import ncp
 import sys
 sys.path.insert(0, '/next/u/pgreens/git/ncp')
 
-# import ncp
 from ncp import datasets
 from ncp import models
 from ncp import tools
@@ -24,9 +25,9 @@ from ncp import tools
 def default_schedule(model):
   config = tools.AttrDict()
   config.num_epochs = 50000
-  config.num_initial = 5797 # Seems to set number of visible points (?)
-  config.num_select = 0 # number to select if adding next target, according to probability in select_next_target
-  config.select_after_epochs = range(1000, 50000, 1000)
+  config.num_initial = 1000 # Seems to set number of visible points (?)
+  config.num_select = 100 # number to select if adding next target, according to probability in select_next_target
+  config.select_after_epochs = range(0, 50000, 100)
   config.eval_after_epochs = range(0, 50000, 500)
   config.log_after_epochs = range(0, 50000, 10000)
   config.visualize_after_epochs = range(0) #range(1000, 50000, 10000)
@@ -41,21 +42,21 @@ def default_schedule(model):
 
 def default_config(model):
   config = tools.AttrDict()
-  config.num_inputs = 193
-  config.layer_sizes = [250, 250, 250]  # [50, 50]
+  config.num_inputs = 223
+  config.layer_sizes = [250, 250]  # [50, 50]
   if model == 'bbb':
-    config.divergence_scale = 0.1
+    config.divergence_scale = 0.1 # 0.1
   if model == 'bbb_ncp':
     config.noise_std = 0.5
     config.ncp_scale = 0.1
     config.divergence_scale = 0
-    config.ood_std_prior = 0.1
+    config.ood_std_prior = 0.5 # 0.1
     config.center_at_target = True
   if model == 'det_mix_ncp':
     config.noise_std = 0.5
     config.center_at_target = True
-  config.learning_rate = 3e-4
-  config.weight_std = 0.1
+  config.learning_rate = 1e-5  # 3e-4
+  config.weight_std = .5 # 0.1
   config.clip_gradient = 100.0
   return config
 
@@ -99,7 +100,7 @@ def main(args):
     plot_results(args)
     return
   warnings.filterwarnings('ignore', category=DeprecationWarning)  # TensorFlow.
-  dataset = datasets.osseq.generate_osseq_dataset()
+  dataset = datasets.apexseq.generate_apexseq_dataset()
   models_ = [
       ('bbb', models.bbb.define_graph),
       ('bbb_ncp', models.bbb_ncp.define_graph),

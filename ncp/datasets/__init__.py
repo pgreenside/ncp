@@ -15,3 +15,4 @@
 from .numpy_dataset import load_numpy_dataset
 from .toy import generate_vargrad_dataset
 from .osseq import generate_osseq_dataset
+from .apexseq import generate_apexseq_dataset

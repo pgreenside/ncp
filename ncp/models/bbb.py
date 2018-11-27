@@ -19,12 +19,12 @@ import tensorflow_probability as tfp
 
 from ncp import tools
 
-
 def network(inputs, config):
   init_std = np.log(np.exp(config.weight_std) - 1).astype(np.float32)
   hidden = inputs
   for size in config.layer_sizes:
     hidden = tf.layers.dense(hidden, size, tf.nn.leaky_relu)
+    hidden = tf.layers.dropout(hidden, rate=0.4)
   kernel_posterior = tfd.Independent(tfd.Normal(
       tf.get_variable(
           'kernel_mean', (hidden.shape[-1].value, 1), tf.float32,
